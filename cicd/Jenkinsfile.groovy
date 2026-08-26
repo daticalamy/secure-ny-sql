@@ -87,31 +87,9 @@ pipeline {
 									usernameVariable: 'DB2_SECURE_USER', passwordVariable: 'DB2_SECURE_PASS']]) {
 
 					sh '''
-					  { set +x; } 2>/dev/null		  
-                      
-                      cd ${PROJ_SQL}
-	
-		     
-          	      echo "Last SCM Commit Message:" `git log -1 --pretty=%B`
-                      LAST_COMMIT_MSG=$(git log -1 --pretty=%B)
-                      WORK_ITEM=$(echo $LAST_COMMIT_MSG|grep -P 'WI [0-9]+' -o) || (echo "Cannot find Work Item Code.  Git commit messages must include WI ######." && exit 1)
-                      #WORK_ITEM_LABEL=$(echo $WORK_ITEM | tr -d ' ' | tr -d 'WI')
-		      cd ../${PROJ_DDB}
-                      pwd
-                      echo "$BRANCH"
-				
-					  echo "$D_PIPELINE"
-					  echo "==== Running - hammer version ===="
-					  hammer show version    
-					  
-                      # setup db2 cli
-                      . ${DB2_HOME}/db2profile
-
-					  # invoke Datical DB's Deployment Packager
+					  { set +x; } 2>/dev/null				
 					  echo "==== Running Build ===="
-  
 					  liquibase status
-					  
 					  '''
 			} // with Credentials (DB2DB)    
       }   // steps
@@ -150,17 +128,17 @@ pipeline {
 	    
     sh '''
     	echo GIT_WORK_ITEM=${GIT_WORK_ITEM}
-	cd ${PROJ_DDB}
-	echo "=== Copying Reports to /home/washx/rtc-dc/datical_reports ==="
-	# Clear temp reports directory
-	# rm -rf /var/lib/jenkins/tmp/rtc-dc/datical_reports/;
-	find . -wholename '*/packagerReport.html' -exec cp {} /var/lib/jenkins/tmp/rtc-dc/datical_reports/packagerReport.html \\;
-	# Move reports to temp directory
-	timeStamp=`date +%Y%m%d%H%M%S`;
-	mv /var/lib/jenkins/tmp/rtc-dc/datical_reports/packagerReport.html /var/lib/jenkins/tmp/rtc-dc/datical_reports/packagerReport_$timeStamp.html || echo 'Could not find packager report'
-	# Attach report to RTC work item
-	echo "=== Triggering upload script... ==="
-	# /var/lib/jenkins/tmp/rtc-dc/upload-datical-report.pl $GIT_WORK_ITEM packagerReport_$timeStamp.html
+	    cd ${PROJ_SQL}
+	    echo "=== Copying Reports to /home/washx/rtc-dc/datical_reports ==="
+	    # Clear temp reports directory
+	    # rm -rf /var/lib/jenkins/tmp/rtc-dc/datical_reports/;
+	    find . -wholename '*/packagerReport.html' -exec cp {} /var/lib/jenkins/tmp/rtc-dc/datical_reports/packagerReport.html \\;
+	    # Move reports to temp directory
+	    timeStamp=`date +%Y%m%d%H%M%S`;
+	    mv /var/lib/jenkins/tmp/rtc-dc/datical_reports/packagerReport.html /var/lib/jenkins/tmp/rtc-dc/datical_reports/packagerReport_$timeStamp.html || echo 'Could not find packager report'
+	    # Attach report to RTC work item
+	    echo "=== Triggering upload script... ==="
+	    # /var/lib/jenkins/tmp/rtc-dc/upload-datical-report.pl $GIT_WORK_ITEM packagerReport_$timeStamp.html
     '''
      // Email Success Log To Developer
      //emailext attachmentsPattern: '**/Reports/**/packagerReport.html', attachLog: false, body: '${BUILD_STATUS}: Datical ${JOB_NAME} for ${work_item} build ${BUILD_NUMBER}', subject: 'Datical Packager Build ${BUILD_STATUS}: Job ${JOB_NAME} Build ${BUILD_NUMBER}', to: '${EMAIL}'
@@ -168,40 +146,25 @@ pipeline {
 	  
     unsuccessful {   
      sh '''
-	echo GIT_WORK_ITEM=${GIT_WORK_ITEM}
-	cd ${PROJ_DDB}
-	echo "=== Copying Reports to /home/washx/rtc-dc/datical_reports ==="
-	# Clear temp reports directory
-	# rm -rf /var/lib/jenkins/tmp/rtc-dc/datical_reports/;
-	find . -wholename '*/packagerReport.html' -exec cp {} /var/lib/jenkins/tmp/rtc-dc/datical_reports/packagerReport.html \\;
-	# Move reports to temp directory
-	timeStamp=`date +%Y%m%d%H%M%S`;
-	mv /var/lib/jenkins/tmp/rtc-dc/datical_reports/packagerReport.html /var/lib/jenkins/tmp/rtc-dc/datical_reports/packagerReport_$timeStamp.html || echo 'Could not find packager report'
-	# Attach report to RTC work item
-	echo "=== Triggering upload script... ==="
-	# /var/lib/jenkins/tmp/rtc-dc/upload-datical-report.pl $GIT_WORK_ITEM packagerReport_$timeStamp.html
+        echo GIT_WORK_ITEM=${GIT_WORK_ITEM}
+        cd ${PROJ_DDB}
+        echo "=== Copying Reports to /home/washx/rtc-dc/datical_reports ==="
+        # Clear temp reports directory
+        # rm -rf /var/lib/jenkins/tmp/rtc-dc/datical_reports/;
+        find . -wholename '*/packagerReport.html' -exec cp {} /var/lib/jenkins/tmp/rtc-dc/datical_reports/packagerReport.html \\;
+        # Move reports to temp directory
+        timeStamp=`date +%Y%m%d%H%M%S`;
+        mv /var/lib/jenkins/tmp/rtc-dc/datical_reports/packagerReport.html /var/lib/jenkins/tmp/rtc-dc/datical_reports/packagerReport_$timeStamp.html || echo 'Could not find packager report'
+        # Attach report to RTC work item
+        echo "=== Triggering upload script... ==="
+        # /var/lib/jenkins/tmp/rtc-dc/upload-datical-report.pl $GIT_WORK_ITEM packagerReport_$timeStamp.html
      '''
      // Email Failure Logs To Developer
-     emailext attachmentsPattern: '**/Reports/**/packagerReport.html', attachLog: true, body: '${BUILD_STATUS}: Datical ${JOB_NAME} for ${work_item} build ${BUILD_NUMBER} Failure: Use the attached console log to see the specific error (Tip: search "error" in the text log)', subject: 'Datical Packager Build ${BUILD_STATUS}: Job ${JOB_NAME} Build ${BUILD_NUMBER}', to: '${EMAIL}'
+     // emailext attachmentsPattern: '**/Reports/**/packagerReport.html', attachLog: true, body: '${BUILD_STATUS}: Datical ${JOB_NAME} for ${work_item} build ${BUILD_NUMBER} Failure: Use the attached console log to see the specific error (Tip: search "error" in the text log)', subject: 'Datical Packager Build ${BUILD_STATUS}: Job ${JOB_NAME} Build ${BUILD_NUMBER}', to: '${EMAIL}'
     } // unsuccessful
 	  
-    cleanup {    
-      // Add Datical's Scrubber Command
-      dir("${PROJ_DDB}") {
-        sh '''
-          hammer debug export --include="datical.project,changelog.xml,daticaldb*.log,*.html,deployPackager.properties,packager.log" --report=Reports/debug/ScrubbedDebugFiles.zip
-        '''
-      } // dir
-      archiveArtifacts '**/daticaldb.log, **/Reports/**, **/Logs/**, **/Snapshots/**'    
-      //cleanWs()
-      //dir("${env.WORKSPACE}@tmp") {
-      //  deleteDir()
-      //}
-      //dir("${env.WORKSPACE}") {
-      //  deleteDir()
-      //}
+    cleanup { 
+      archiveArtifacts '**/logs/**, **/reports/**, **/sql/**'
     }  // cleanup
-	  
   } // post
-  
 } // pipeline
