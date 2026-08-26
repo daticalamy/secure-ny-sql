@@ -1,0 +1,13 @@
+##########           LIQUIBASE FLOWFILE                ##########
+##########  learn more http://docs.liquibase.com/flow  ##########
+
+globalVariables:
+  ENV: ${ENVIRONMENT}
+
+stages:
+
+  Checks-Packages:
+    # Run different checks per environment
+    actions:
+      - type: shell
+        command: liquibase checks run --checks-settings-file=main-checks.pkg --checks-packages=${ENV}-checks

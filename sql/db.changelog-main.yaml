@@ -1,0 +1,7 @@
+databaseChangeLog:
+      
+  - includeAll:
+      path: data_dml
+      relativeToChangelogFile: true
+      errorIfMissingOrEmpty: false
+      

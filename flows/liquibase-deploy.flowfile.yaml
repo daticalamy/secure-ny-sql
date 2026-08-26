@@ -1,0 +1,73 @@
+##########           LIQUIBASE FLOWFILE                ##########
+##########  learn more http://docs.liquibase.com/flow  ##########
+
+globalVariables:
+  JIRA: ${JIRA:-null}
+  ENV: ${ENVIRONMENT}
+  BUCKET: ${AWS_S3_BUCKET}
+
+stages:
+
+  Drift-Detection:
+    # Check if manual updates were made to the environment since last deployment
+    actions:
+      - type: shell
+        command: liquibase --search-path=s3://${BUCKET}/snapshots diff --reference-url=offline:postgres?snapshot=${ENV}-snapshot.json --report-name="drift-report-${ENV}.html" --drift-severity=1
+          
+  Validation:
+    actions: 
+      - type: liquibase
+        command: validate
+
+  Checks-Changelog:
+    actions:
+      - type: liquibase
+        command: checks run
+        cmdArgs: {checks-scope: changelog}
+        globalArgs: { reports-name: "checks-report-deploy-${ENV}-changelog.html" }
+
+  Status:
+    actions:
+      - type: liquibase
+        command: status
+        cmdArgs: {verbose: true, context-filter: "${ENV}"}
+
+  Update-SQL:
+    actions:
+      - type: liquibase
+        command: update-sql
+        cmdArgs: {context-filter: "${ENV}"}
+
+  Update:
+    actions:
+      - type: liquibase
+        command: update
+        cmdArgs: {context-filter: "${ENV}"}
+        globalArgs: { reports-name: "deploy-report-${ENV}.html" }
+
+  Checks-Database:
+    actions:
+      - type: liquibase
+        command: checks run
+        cmdArgs: {checks-scope: database}
+        globalArgs: { reports-name: "checks-report-deploy-${ENV}-database.html" }
+        
+  New-Snapshot:
+    actions:
+      - type: liquibase
+        command: snapshot
+        cmdArgs: 
+          {  snapshot-format: json }
+        globalArgs: { output-file: 's3://${BUCKET}/snapshots/${ENV}-snapshot.json' }
+        
+      - type: shell
+        command: echo 'Updated snapshot saved to s3://${BUCKET}/snapshots/${ENV}-snapshot.json'
+
+## The endStage ALWAYS RUNS. 
+## So put actions here which you desire to perform whether previous stages' actions succeed or fail.
+## If you do not want any actions to ALWAYS RUN, simply delete the endStage from your flow file.
+
+endStage:
+  actions:
+    - type: liquibase
+      command: history

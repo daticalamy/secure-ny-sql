@@ -1,0 +1,18 @@
+##########           LIQUIBASE FLOWFILE                ##########
+##########  learn more http://docs.liquibase.com/flow  ##########
+
+globalVariables:
+  ENV: ${ENVIRONMENT}
+  BUCKET: ${AWS_S3_BUCKET}
+
+stages:
+  Snapshot:
+    actions:
+      - type: liquibase
+        command: snapshot
+        cmdArgs: 
+          {  snapshot-format: json }
+        globalArgs: { output-file: 's3://${BUCKET}/snapshots/${ENV}-snapshot.json' }
+        
+      - type: shell
+        command: echo 'Snapshot saved to s3://${BUCKET}/snapshots/${ENV}-snapshot.json'
