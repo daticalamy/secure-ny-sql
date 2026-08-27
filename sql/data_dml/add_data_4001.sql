@@ -5,3 +5,6 @@ INSERT INTO new_emp14 (id, name, jobrole) VALUES (4002,'Clairo','Singer');
 
 --changeset asmith:table_001_insert_4003 labels:"WI 393838"
 INSERT INTO new_emp14 (id, name, jobrole) VALUES (4003,'Clairo','Singer'); 
+
+--changeset asmith:table_001_insert_4004 labels:"WI 393839"
+INSERT INTO new_emp14 (id, name, jobrole) VALUES (4004,'Clairo','Singer'); 
