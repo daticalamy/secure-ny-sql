@@ -1,0 +1,87 @@
+#############################################################################
+#  GitHub Action to run checks on the first database, eg. DEV,
+#  using Liquibase Secure, Flows, Policy checks, and other services.
+##############################################################################
+name: 'Liquibase Secure Policy Checks'
+run-name: ${{ inputs.environment}} policy checks of current repo by ${{ github.actor }}
+
+on:
+  workflow_dispatch:
+    # Following are the inputs received via the GitHubActions Run workflow dialog
+    inputs:
+    
+      # The type 'environment' will automatically pull in the environments created in GitHub
+      environment:
+        description: 'Environment for build'
+        type: environment
+        required: true
+        default: DEV
+
+####################################################################
+#  Set up the environment
+#####################################################################
+env:
+  # Secure License key
+  LIQUIBASE_LICENSE_KEY: ${{ secrets.LIQUIBASE_LICENSE_KEY }}
+  
+  # JDBC URL of the database per environment
+  # See https://docs.liquibase.com/workflows/liquibase-community/using-jdbc-url-in-liquibase.html
+  LIQUIBASE_COMMAND_URL: ${{ vars.LIQUIBASE_URL }}
+
+  # Credentials for the environment's database https://docs.liquibase.com/parameters/command-parameters.html
+  LIQUIBASE_COMMAND_USERNAME: ${{ secrets.LIQUIBASE_USERNAME }}
+  LIQUIBASE_COMMAND_PASSWORD: ${{ secrets.LIQUIBASE_PASSWORD }}
+
+  # Liquibase schema: Specified to allow flexibility in storage of Liquibase Change Tracking Tables
+  # See https://docs.liquibase.com/parameters/liquibase-schema-name.html
+  LIQUIBASE_LIQUIBASE_SCHEMA_NAME: MUREX
+  
+  # Default schema: Specify schema for all changes
+  LIQUIBASE_COMMAND_DEFAULT_SCHEMA_NAME: MUREX
+
+  # Search path (See https://docs.liquibase.com/concepts/changelogs/how-liquibase-finds-files.html)
+  LIQUIBASE_SEARCH_PATH: flows,checks,changelogs
+  
+  # The database changelog. See https://docs.liquibase.com/concepts/changelogs/working-with-changelogs.html
+  LIQUIBASE_COMMAND_CHANGELOG_FILE: rootchangelog.yaml
+  
+  ENVIRONMENT: ${{ inputs.environment }}
+
+  # Reports
+  LIQUIBASE_REPORT_PATH: reports
+  
+  # Values: OFF, SEVERE, WARNING, INFO, FINE
+  LIQUIBASE_LOG_LEVEL: INFO
+  LIQUIBASE_LOG_FORMAT: JSON_PRETTY
+  LIQUIBASE_LOG_FILE: logs/log.json
+
+  # History table
+  LIQUIBASE_DBCLHISTORY_ENABLED: true
+  
+  # Checks 
+  LIQUIBASE_COMMAND_CHECKS_RUN_CHECKS_SCRIPTS_ENABLED: true
+  LIQUIBASE_COMMAND_CHECKS_RUN_AUTO_UPDATE: off
+
+jobs:
+  #########################################################################
+  #  Build
+  #########################################################################
+
+  policy-checks:
+    runs-on: [self-hosted]
+    environment: ${{ inputs.environment }}
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Liquibase Environment
+      uses: ./.github/workflows/setup-liquibase
+
+    - name: Liquibase Checks Flow
+      run: liquibase flow --flow-file=liquibase-checks.flowfile.yaml
+
+    - name: Upload Reports Artifact
+      if: always()
+      uses: ./.github/workflows/upload-reports
+      with:
+        job-type: checks
+        upload-other: false

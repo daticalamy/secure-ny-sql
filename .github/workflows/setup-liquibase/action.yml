@@ -1,0 +1,18 @@
+# .github/workflows/setup-liquibase/action.yml
+name: 'Setup Liquibase Environment'
+description: 'Sets up Java and Liquibase Secure'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: Setup Liquibase Secure
+      uses: liquibase/setup-liquibase@v2
+      with:
+        version: '5.2.2'
+        edition: 'secure'
