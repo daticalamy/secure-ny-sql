@@ -6,8 +6,9 @@ globalVariables:
 
 stages:
 
-  Checks-Packages:
-    # Run different checks per environment
+  Checks-Changelog:
     actions:
-      - type: shell
-        command: liquibase checks run --checks-settings-file=main-checks.pkg --checks-packages=${ENV}-checks
+      - type: liquibase
+        command: checks run
+        cmdArgs: {checks-scope: changelog, context-filter: "${ENV}", changeset-filter: "PENDING"}
+        globalArgs: { reports-name: "checks-report.html" }

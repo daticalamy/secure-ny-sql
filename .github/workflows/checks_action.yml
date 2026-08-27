@@ -15,7 +15,7 @@ on:
         description: 'Environment for build'
         type: environment
         required: true
-        default: DEV
+        default: REF
 
 ####################################################################
 #  Set up the environment
