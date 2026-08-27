@@ -128,47 +128,43 @@ pipeline {
   }   // stages
 	
   post {
-    success {   
-	    
-    sh '''
-    	echo GIT_WORK_ITEM=${GIT_WORK_ITEM}
-	    cd ${PROJ_SQL}
-	    echo "=== Copying Reports to /home/washx/rtc-dc/datical_reports ==="
-	    # Clear temp reports directory
-	    # rm -rf /var/lib/jenkins/tmp/rtc-dc/datical_reports/;
-	    find . -wholename '*/packagerReport.html' -exec cp {} /var/lib/jenkins/tmp/rtc-dc/datical_reports/packagerReport.html \\;
-	    # Move reports to temp directory
-	    timeStamp=`date +%Y%m%d%H%M%S`;
-	    mv /var/lib/jenkins/tmp/rtc-dc/datical_reports/packagerReport.html /var/lib/jenkins/tmp/rtc-dc/datical_reports/packagerReport_$timeStamp.html || echo 'Could not find packager report'
-	    # Attach report to RTC work item
-	    echo "=== Triggering upload script... ==="
-	    # /var/lib/jenkins/tmp/rtc-dc/upload-datical-report.pl $GIT_WORK_ITEM packagerReport_$timeStamp.html
-    '''
-     // Email Success Log To Developer
-     //emailext attachmentsPattern: '**/Reports/**/packagerReport.html', attachLog: false, body: '${BUILD_STATUS}: Datical ${JOB_NAME} for ${work_item} build ${BUILD_NUMBER}', subject: 'Datical Packager Build ${BUILD_STATUS}: Job ${JOB_NAME} Build ${BUILD_NUMBER}', to: '${EMAIL}'
-    } // successful
-	  
-    unsuccessful {   
-     sh '''
-        echo GIT_WORK_ITEM=${GIT_WORK_ITEM}
-        cd ${PROJ_DDB}
-        echo "=== Copying Reports to /home/washx/rtc-dc/datical_reports ==="
-        # Clear temp reports directory
-        # rm -rf /var/lib/jenkins/tmp/rtc-dc/datical_reports/;
-        find . -wholename '*/packagerReport.html' -exec cp {} /var/lib/jenkins/tmp/rtc-dc/datical_reports/packagerReport.html \\;
-        # Move reports to temp directory
-        timeStamp=`date +%Y%m%d%H%M%S`;
-        mv /var/lib/jenkins/tmp/rtc-dc/datical_reports/packagerReport.html /var/lib/jenkins/tmp/rtc-dc/datical_reports/packagerReport_$timeStamp.html || echo 'Could not find packager report'
-        # Attach report to RTC work item
-        echo "=== Triggering upload script... ==="
-        # /var/lib/jenkins/tmp/rtc-dc/upload-datical-report.pl $GIT_WORK_ITEM packagerReport_$timeStamp.html
-     '''
-     // Email Failure Logs To Developer
-     // emailext attachmentsPattern: '**/Reports/**/packagerReport.html', attachLog: true, body: '${BUILD_STATUS}: Datical ${JOB_NAME} for ${work_item} build ${BUILD_NUMBER} Failure: Use the attached console log to see the specific error (Tip: search "error" in the text log)', subject: 'Datical Packager Build ${BUILD_STATUS}: Job ${JOB_NAME} Build ${BUILD_NUMBER}', to: '${EMAIL}'
+    always {
+        sh '''
+            echo GIT_WORK_ITEM=${GIT_WORK_ITEM}
+            cd ${PROJ_SQL}
+            echo "=== Copying Reports to /home/cust_reports ==="
+            # Clear temp reports directory
+            rm -rf /var/lib/jenkins/tmp/cust_reports/;
+            timeStamp=`date +%Y%m%d%H%M%S`;
+            reportCount=0
+            while IFS= read -r -d '' report; do
+              reportName=$(basename "$report" .html)
+              cp "$report" "/var/lib/jenkins/tmp/cust_reports/${reportName}_${timeStamp}.html"
+              echo "=== Triggering upload script... ==="
+              # /var/lib/jenkins/tmp/rtc-dc/upload-datical-report.pl $GIT_WORK_ITEM ${reportName}_${timeStamp}.html
+              reportCount=$((reportCount + 1))
+            done < <(find . -name '*.html' -print0)
+            if [ "$reportCount" -eq 0 ]; then
+              echo 'Could not find any Liquibase Secure reports'
+            else
+              echo "Copied $reportCount report(s) to /var/lib/jenkins/tmp/cust_reports/"
+            fi
+            # Attach report(s) to RTC work item
+        '''
+    } // always
+
+    success {
+        // Email Success Log To Developer
+        //emailext attachmentsPattern: '**/Reports/**/*.html', attachLog: false, body: '${BUILD_STATUS}: ${JOB_NAME} for ${work_item} build ${BUILD_NUMBER}', subject: 'Build ${BUILD_STATUS}: Job ${JOB_NAME} Build ${BUILD_NUMBER}', to: '${EMAIL}'
+    } // success
+
+    unsuccessful {
+        // Email Failure Logs To Developer
+        // emailext attachmentsPattern: '**/Reports/**/*.html', attachLog: true, body: '${BUILD_STATUS}: ${JOB_NAME} for ${work_item} build ${BUILD_NUMBER} Failure: Use the attached console log to see the specific error (Tip: search "error" in the text log)', subject: 'Build ${BUILD_STATUS}: Job ${JOB_NAME} Build ${BUILD_NUMBER}', to: '${EMAIL}'
     } // unsuccessful
 	  
     cleanup { 
-      archiveArtifacts '**/logs/**, **/reports/**, **/sql/**'
+      archiveArtifacts '**/logs/**, **/reports/**'
     }  // cleanup
   } // post
 } // pipeline
