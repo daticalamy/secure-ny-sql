@@ -19,7 +19,24 @@ pipeline {
     DB2_HOME="/home/db2inst1/sqllib"
     UCD_COMMAND_HOME="/var/lib/jenkins/udclient"
     PATH="$PATH:/opt/liquibase/liquibase:$DB2_HOME/bin:$UCD_COMMAND_HOME"
-    BASE_VERSION="50" 
+    BASE_VERSION="50"
+    EMAIL="asmith@liquibase.com"
+
+    LIQUIBASE_LICENSE_KEY = credentials('LIQUIBASE_LICENSE_KEY')
+    LIQUIBASE_SEARCH_PATH="checks, flows, sql"
+    LIQUIBASE_COMMAND_CHANGELOG_FILE="db.changelog-main.yaml"
+    LIQUIBASE_COMMAND_URL="jdbc:db2://db2-luw.liquibase.net:50000/GDITREF5"
+    LIQUIBASE_LIQUIBASE_SCHEMA_NAME="SECURE_TRACKING"
+    LIQUIBASE_COMMAND_DEFAULT_SCHEMA_NAME="NYHBEODB_929"
+
+    LIQUIBASE_LOG_FORMAT="JSON_PRETTY"
+    LIQUIBASE_LOG_FILE="logs/log.json"
+    LIQUIBASE_LOG_LEVEL="INFO"
+
+    LIQUIBASE_DBCLHISTORY_ENABLED="true"
+    LIQUIBASE_REPORTS_PATH="reports"
+    LIQUIBASE_COMMAND_CHECKS_RUN_AUTO_UPDATE="false"
+
   }
 	
   stages {
@@ -88,12 +105,13 @@ pipeline {
       steps {
 
 		 		withCredentials([[$class: 'UsernamePasswordMultiBinding', credentialsId: 'DB2Login',
-									usernameVariable: 'DB2_SECURE_USER', passwordVariable: 'DB2_SECURE_PASS']]) {
+									usernameVariable: 'LIQUIBASE_COMMAND_USERNAME', passwordVariable: 'LIQUIBASE_COMMAND_PASSWORD']]) {
 
 					sh '''
-					  { set +x; } 2>/dev/null				
+					  { set +x; } 2>/dev/null
+            cd ${PROJ_SQL}				
 					  echo "==== Running Build ===="
-					  liquibase status
+					  liquibase flow --flowfile=liquibase-build.flowfile.yaml
 					  '''
 			} // with Credentials (DB2DB)    
       }   // steps
@@ -133,13 +151,15 @@ pipeline {
             echo GIT_WORK_ITEM=${GIT_WORK_ITEM}
             cd ${PROJ_SQL}
             echo "=== Copying Reports to /home/cust_reports ==="
-            # Clear temp reports directory
-            rm -rf /var/lib/jenkins/tmp/cust_reports/;
+            # Ensure temp reports directory exists, then clear its contents (not the dir itself)
+            mkdir -p /var/lib/jenkins/tmp/cust_reports/
+            rm -rf /var/lib/jenkins/tmp/cust_reports/*
             timeStamp=`date +%Y%m%d%H%M%S`;
             reportCount=0
             while IFS= read -r -d '' report; do
               reportName=$(basename "$report" .html)
               cp "$report" "/var/lib/jenkins/tmp/cust_reports/${reportName}_${timeStamp}.html"
+              # Attach report to RTC work item
               echo "=== Triggering upload script... ==="
               # /var/lib/jenkins/tmp/rtc-dc/upload-datical-report.pl $GIT_WORK_ITEM ${reportName}_${timeStamp}.html
               reportCount=$((reportCount + 1))
@@ -149,16 +169,17 @@ pipeline {
             else
               echo "Copied $reportCount report(s) to /var/lib/jenkins/tmp/cust_reports/"
             fi
-            # Attach report(s) to RTC work item
         '''
     } // always
 
     success {
+        echo "Build succeeded for WI ${env.GIT_WORK_ITEM}"
         // Email Success Log To Developer
-        //emailext attachmentsPattern: '**/Reports/**/*.html', attachLog: false, body: '${BUILD_STATUS}: ${JOB_NAME} for ${work_item} build ${BUILD_NUMBER}', subject: 'Build ${BUILD_STATUS}: Job ${JOB_NAME} Build ${BUILD_NUMBER}', to: '${EMAIL}'
+        // emailext attachmentsPattern: '**/Reports/**/*.html', attachLog: false, body: '${BUILD_STATUS}: ${JOB_NAME} for ${work_item} build ${BUILD_NUMBER}', subject: 'Build ${BUILD_STATUS}: Job ${JOB_NAME} Build ${BUILD_NUMBER}', to: '${EMAIL}'
     } // success
 
     unsuccessful {
+        echo "Build did not succeed for WI ${env.GIT_WORK_ITEM}"
         // Email Failure Logs To Developer
         // emailext attachmentsPattern: '**/Reports/**/*.html', attachLog: true, body: '${BUILD_STATUS}: ${JOB_NAME} for ${work_item} build ${BUILD_NUMBER} Failure: Use the attached console log to see the specific error (Tip: search "error" in the text log)', subject: 'Build ${BUILD_STATUS}: Job ${JOB_NAME} Build ${BUILD_NUMBER}', to: '${EMAIL}'
     } // unsuccessful
