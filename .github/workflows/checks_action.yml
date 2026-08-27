@@ -6,6 +6,15 @@ name: 'Liquibase Secure Policy Checks'
 run-name: ${{ inputs.environment}} policy checks of current repo by ${{ github.actor }}
 
 on:
+  push:
+    paths:
+      - 'sql/**'
+      - 'db.changelog-main.yaml'
+  pull_request:
+    paths:
+      - 'sql/**'
+      - 'db.changelog-main.yaml'
+
   workflow_dispatch:
     # Following are the inputs received via the GitHubActions Run workflow dialog
     inputs:
