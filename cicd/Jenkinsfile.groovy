@@ -18,32 +18,36 @@ pipeline {
     REPOSITORY_BASE="<base_dir>"
     DB2_HOME="/home/db2inst1/sqllib"
     UCD_COMMAND_HOME="/var/lib/jenkins/udclient"
-    PATH="$PATH:/opt/liquibase/liquibase/liquibase:$DB2_HOME/bin:$UCD_COMMAND_HOME"
+    PATH="$PATH:/opt/liquibase/liquibase:$DB2_HOME/bin:$UCD_COMMAND_HOME"
     BASE_VERSION="50" 
-	  
-    GIT_WORK_ITEM="${params.work_item}".trim().replaceAll(" +", " ").substring(3,9)
   }
 	
-  stages {  
-    stage ('Precheck') {
-		steps {
-			script {
-                          currentBuild.displayName = "#" +env.BUILD_NUMBER + " - WI ${GIT_WORK_ITEM}"
-                        }
+  stages {
 
-			sh '''
-				echo DB2_HOME=${DB2_HOME}
-				echo PATH=${PATH}
-				whoami
-				which git
-				which db2
-				git --version
-				git config --global user.email "admin@liquibase.net"
-				git config --global user.name "Admin"
-				echo GIT_WORK_ITEM=${GIT_WORK_ITEM}
-			'''
-		} // steps
-	} // stage 'precheck'
+      stage ('Precheck') {
+      steps {
+        script {
+          def commitMsg = "${params.work_item}".trim().replaceAll(" +", " ")
+          def matcher = (commitMsg =~ /^WI\s+(\d{6})/)
+          env.GIT_WORK_ITEM = matcher.find() ? matcher.group(1) : "Unset"
+
+          currentBuild.displayName = "#${env.BUILD_NUMBER} - WI ${env.GIT_WORK_ITEM}"
+        }
+
+        sh '''
+          echo DB2_HOME=${DB2_HOME}
+          echo PATH=${PATH}
+          whoami
+          which git
+          which db2
+          git --version
+          git config --global user.email "admin@liquibase.net"
+          git config --global user.name "Admin"
+          echo GIT_WORK_ITEM=${GIT_WORK_ITEM}
+        '''
+      } // steps
+    } // stage 'precheck'
+
     stage ('Checkout') {
       steps {
 	      
@@ -87,31 +91,9 @@ pipeline {
 									usernameVariable: 'DB2_SECURE_USER', passwordVariable: 'DB2_SECURE_PASS']]) {
 
 					sh '''
-					  { set +x; } 2>/dev/null		  
-                      
-                      cd ${PROJ_SQL}
-	
-		     
-          	      echo "Last SCM Commit Message:" `git log -1 --pretty=%B`
-                      LAST_COMMIT_MSG=$(git log -1 --pretty=%B)
-                      WORK_ITEM=$(echo $LAST_COMMIT_MSG|grep -P 'WI [0-9]+' -o) || (echo "Cannot find Work Item Code.  Git commit messages must include WI ######." && exit 1)
-                      #WORK_ITEM_LABEL=$(echo $WORK_ITEM | tr -d ' ' | tr -d 'WI')
-		      cd ../${PROJ_DDB}
-                      pwd
-                      echo "$BRANCH"
-				
-					  echo "$D_PIPELINE"
-					  echo "==== Running - hammer version ===="
-					  hammer show version    
-					  
-                      # setup db2 cli
-                      . ${DB2_HOME}/db2profile
-
-					  # invoke Datical DB's Deployment Packager
+					  { set +x; } 2>/dev/null				
 					  echo "==== Running Build ===="
-  
 					  liquibase status
-					  
 					  '''
 			} // with Credentials (DB2DB)    
       }   // steps
@@ -146,62 +128,43 @@ pipeline {
   }   // stages
 	
   post {
-    success {   
-	    
-    sh '''
-    	echo GIT_WORK_ITEM=${GIT_WORK_ITEM}
-	cd ${PROJ_DDB}
-	echo "=== Copying Reports to /home/washx/rtc-dc/datical_reports ==="
-	# Clear temp reports directory
-	# rm -rf /var/lib/jenkins/tmp/rtc-dc/datical_reports/;
-	find . -wholename '*/packagerReport.html' -exec cp {} /var/lib/jenkins/tmp/rtc-dc/datical_reports/packagerReport.html \\;
-	# Move reports to temp directory
-	timeStamp=`date +%Y%m%d%H%M%S`;
-	mv /var/lib/jenkins/tmp/rtc-dc/datical_reports/packagerReport.html /var/lib/jenkins/tmp/rtc-dc/datical_reports/packagerReport_$timeStamp.html || echo 'Could not find packager report'
-	# Attach report to RTC work item
-	echo "=== Triggering upload script... ==="
-	# /var/lib/jenkins/tmp/rtc-dc/upload-datical-report.pl $GIT_WORK_ITEM packagerReport_$timeStamp.html
-    '''
-     // Email Success Log To Developer
-     //emailext attachmentsPattern: '**/Reports/**/packagerReport.html', attachLog: false, body: '${BUILD_STATUS}: Datical ${JOB_NAME} for ${work_item} build ${BUILD_NUMBER}', subject: 'Datical Packager Build ${BUILD_STATUS}: Job ${JOB_NAME} Build ${BUILD_NUMBER}', to: '${EMAIL}'
-    } // successful
-	  
-    unsuccessful {   
-     sh '''
-	echo GIT_WORK_ITEM=${GIT_WORK_ITEM}
-	cd ${PROJ_DDB}
-	echo "=== Copying Reports to /home/washx/rtc-dc/datical_reports ==="
-	# Clear temp reports directory
-	# rm -rf /var/lib/jenkins/tmp/rtc-dc/datical_reports/;
-	find . -wholename '*/packagerReport.html' -exec cp {} /var/lib/jenkins/tmp/rtc-dc/datical_reports/packagerReport.html \\;
-	# Move reports to temp directory
-	timeStamp=`date +%Y%m%d%H%M%S`;
-	mv /var/lib/jenkins/tmp/rtc-dc/datical_reports/packagerReport.html /var/lib/jenkins/tmp/rtc-dc/datical_reports/packagerReport_$timeStamp.html || echo 'Could not find packager report'
-	# Attach report to RTC work item
-	echo "=== Triggering upload script... ==="
-	# /var/lib/jenkins/tmp/rtc-dc/upload-datical-report.pl $GIT_WORK_ITEM packagerReport_$timeStamp.html
-     '''
-     // Email Failure Logs To Developer
-     emailext attachmentsPattern: '**/Reports/**/packagerReport.html', attachLog: true, body: '${BUILD_STATUS}: Datical ${JOB_NAME} for ${work_item} build ${BUILD_NUMBER} Failure: Use the attached console log to see the specific error (Tip: search "error" in the text log)', subject: 'Datical Packager Build ${BUILD_STATUS}: Job ${JOB_NAME} Build ${BUILD_NUMBER}', to: '${EMAIL}'
+    always {
+        sh '''
+            echo GIT_WORK_ITEM=${GIT_WORK_ITEM}
+            cd ${PROJ_SQL}
+            echo "=== Copying Reports to /home/cust_reports ==="
+            # Clear temp reports directory
+            rm -rf /var/lib/jenkins/tmp/cust_reports/;
+            timeStamp=`date +%Y%m%d%H%M%S`;
+            reportCount=0
+            while IFS= read -r -d '' report; do
+              reportName=$(basename "$report" .html)
+              cp "$report" "/var/lib/jenkins/tmp/cust_reports/${reportName}_${timeStamp}.html"
+              echo "=== Triggering upload script... ==="
+              # /var/lib/jenkins/tmp/rtc-dc/upload-datical-report.pl $GIT_WORK_ITEM ${reportName}_${timeStamp}.html
+              reportCount=$((reportCount + 1))
+            done < <(find . -name '*.html' -print0)
+            if [ "$reportCount" -eq 0 ]; then
+              echo 'Could not find any Liquibase Secure reports'
+            else
+              echo "Copied $reportCount report(s) to /var/lib/jenkins/tmp/cust_reports/"
+            fi
+            # Attach report(s) to RTC work item
+        '''
+    } // always
+
+    success {
+        // Email Success Log To Developer
+        //emailext attachmentsPattern: '**/Reports/**/*.html', attachLog: false, body: '${BUILD_STATUS}: ${JOB_NAME} for ${work_item} build ${BUILD_NUMBER}', subject: 'Build ${BUILD_STATUS}: Job ${JOB_NAME} Build ${BUILD_NUMBER}', to: '${EMAIL}'
+    } // success
+
+    unsuccessful {
+        // Email Failure Logs To Developer
+        // emailext attachmentsPattern: '**/Reports/**/*.html', attachLog: true, body: '${BUILD_STATUS}: ${JOB_NAME} for ${work_item} build ${BUILD_NUMBER} Failure: Use the attached console log to see the specific error (Tip: search "error" in the text log)', subject: 'Build ${BUILD_STATUS}: Job ${JOB_NAME} Build ${BUILD_NUMBER}', to: '${EMAIL}'
     } // unsuccessful
 	  
-    cleanup {    
-      // Add Datical's Scrubber Command
-      dir("${PROJ_DDB}") {
-        sh '''
-          hammer debug export --include="datical.project,changelog.xml,daticaldb*.log,*.html,deployPackager.properties,packager.log" --report=Reports/debug/ScrubbedDebugFiles.zip
-        '''
-      } // dir
-      archiveArtifacts '**/daticaldb.log, **/Reports/**, **/Logs/**, **/Snapshots/**'    
-      //cleanWs()
-      //dir("${env.WORKSPACE}@tmp") {
-      //  deleteDir()
-      //}
-      //dir("${env.WORKSPACE}") {
-      //  deleteDir()
-      //}
+    cleanup { 
+      archiveArtifacts '**/logs/**, **/reports/**'
     }  // cleanup
-	  
   } // post
-  
 } // pipeline
