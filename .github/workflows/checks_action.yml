@@ -34,10 +34,10 @@ env:
 
   # Liquibase schema: Specified to allow flexibility in storage of Liquibase Change Tracking Tables
   # See https://docs.liquibase.com/parameters/liquibase-schema-name.html
-  LIQUIBASE_LIQUIBASE_SCHEMA_NAME: MUREX
+  LIQUIBASE_LIQUIBASE_SCHEMA_NAME: SECURE_TRACKING
   
   # Default schema: Specify schema for all changes
-  LIQUIBASE_COMMAND_DEFAULT_SCHEMA_NAME: MUREX
+  LIQUIBASE_COMMAND_DEFAULT_SCHEMA_NAME: ${{ vars.LIQUIBASE_DEFAULT_SCHEMA }}
 
   # Search path (See https://docs.liquibase.com/concepts/changelogs/how-liquibase-finds-files.html)
   LIQUIBASE_SEARCH_PATH: flows,checks,changelogs
