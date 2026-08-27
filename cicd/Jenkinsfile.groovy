@@ -108,9 +108,10 @@ pipeline {
 									usernameVariable: 'LIQUIBASE_COMMAND_USERNAME', passwordVariable: 'LIQUIBASE_COMMAND_PASSWORD']]) {
 
 					sh '''
-					  { set +x; } 2>/dev/null				
+					  { set +x; } 2>/dev/null
+            cd ${PROJ_SQL}				
 					  echo "==== Running Build ===="
-					  liquibase status
+					  liquibase flow --flowfile=liquibase-build.flowfile.yaml
 					  '''
 			} // with Credentials (DB2DB)    
       }   // steps
