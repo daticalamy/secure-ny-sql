@@ -20,30 +20,34 @@ pipeline {
     UCD_COMMAND_HOME="/var/lib/jenkins/udclient"
     PATH="$PATH:/opt/liquibase/liquibase/liquibase:$DB2_HOME/bin:$UCD_COMMAND_HOME"
     BASE_VERSION="50" 
-	  
-    GIT_WORK_ITEM="${params.work_item}".trim().replaceAll(" +", " ").substring(3,9)
   }
 	
-  stages {  
-    stage ('Precheck') {
-		steps {
-			script {
-                          currentBuild.displayName = "#" +env.BUILD_NUMBER + " - WI ${GIT_WORK_ITEM}"
-                        }
+  stages {
 
-			sh '''
-				echo DB2_HOME=${DB2_HOME}
-				echo PATH=${PATH}
-				whoami
-				which git
-				which db2
-				git --version
-				git config --global user.email "admin@liquibase.net"
-				git config --global user.name "Admin"
-				echo GIT_WORK_ITEM=${GIT_WORK_ITEM}
-			'''
-		} // steps
-	} // stage 'precheck'
+      stage ('Precheck') {
+      steps {
+        script {
+          def commitMsg = "${params.work_item}".trim().replaceAll(" +", " ")
+          def matcher = (commitMsg =~ /^WI\s+(\d{6})/)
+          env.GIT_WORK_ITEM = matcher.find() ? matcher.group(1) : "Unset"
+
+          currentBuild.displayName = "#${env.BUILD_NUMBER} - WI ${env.GIT_WORK_ITEM}"
+        }
+
+        sh '''
+          echo DB2_HOME=${DB2_HOME}
+          echo PATH=${PATH}
+          whoami
+          which git
+          which db2
+          git --version
+          git config --global user.email "admin@liquibase.net"
+          git config --global user.name "Admin"
+          echo GIT_WORK_ITEM=${GIT_WORK_ITEM}
+        '''
+      } // steps
+    } // stage 'precheck'
+
     stage ('Checkout') {
       steps {
 	      
