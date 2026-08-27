@@ -19,7 +19,9 @@ pipeline {
     DB2_HOME="/home/db2inst1/sqllib"
     UCD_COMMAND_HOME="/var/lib/jenkins/udclient"
     PATH="$PATH:/opt/liquibase/liquibase:$DB2_HOME/bin:$UCD_COMMAND_HOME"
-    BASE_VERSION="50" 
+    BASE_VERSION="50"
+    EMAIL="asmith@liquibase.com"
+ 
   }
 	
   stages {
@@ -155,12 +157,12 @@ pipeline {
 
     success {
         // Email Success Log To Developer
-        //emailext attachmentsPattern: '**/Reports/**/*.html', attachLog: false, body: '${BUILD_STATUS}: ${JOB_NAME} for ${work_item} build ${BUILD_NUMBER}', subject: 'Build ${BUILD_STATUS}: Job ${JOB_NAME} Build ${BUILD_NUMBER}', to: '${EMAIL}'
+        emailext attachmentsPattern: '**/Reports/**/*.html', attachLog: false, body: '${BUILD_STATUS}: ${JOB_NAME} for ${work_item} build ${BUILD_NUMBER}', subject: 'Build ${BUILD_STATUS}: Job ${JOB_NAME} Build ${BUILD_NUMBER}', to: '${EMAIL}'
     } // success
 
     unsuccessful {
         // Email Failure Logs To Developer
-        // emailext attachmentsPattern: '**/Reports/**/*.html', attachLog: true, body: '${BUILD_STATUS}: ${JOB_NAME} for ${work_item} build ${BUILD_NUMBER} Failure: Use the attached console log to see the specific error (Tip: search "error" in the text log)', subject: 'Build ${BUILD_STATUS}: Job ${JOB_NAME} Build ${BUILD_NUMBER}', to: '${EMAIL}'
+        emailext attachmentsPattern: '**/Reports/**/*.html', attachLog: true, body: '${BUILD_STATUS}: ${JOB_NAME} for ${work_item} build ${BUILD_NUMBER} Failure: Use the attached console log to see the specific error (Tip: search "error" in the text log)', subject: 'Build ${BUILD_STATUS}: Job ${JOB_NAME} Build ${BUILD_NUMBER}', to: '${EMAIL}'
     } // unsuccessful
 	  
     cleanup { 
