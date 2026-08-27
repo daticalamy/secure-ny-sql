@@ -13,13 +13,6 @@ stages:
     actions: 
       - type: liquibase
         command: validate
-
-  Checks-Changelog:
-    actions:
-      - type: liquibase
-        command: checks run
-        cmdArgs: {checks-scope: changelog, context-filter: DEV}
-        globalArgs: { reports-name: "checks-report-build-changelog.html" }
          
   Status:
     actions:
@@ -27,16 +20,23 @@ stages:
         command: status
         cmdArgs: {verbose: true, context-filter: DEV}
 
+      - type: control
+        if: "status.changesetCount == 0"
+        command: exit
+        cmdArgs: {exitCode: 0, exitMessage: "Exiting with an error status of 0 because the database is up-to-date"}
+
+  Checks-Changelog:
+    actions:
+      - type: liquibase
+        command: checks run
+        cmdArgs: {checks-scope: changelog, context-filter: DEV, changeset-filter: "PENDING"}
+        globalArgs: { reports-name: "checks-report-build-changelog.html" }
+
   Update-SQL:
     actions:
       - type: liquibase
         command: update-sql
         cmdArgs: {context-filter: DEV, reports-name: "dryrun-report.html"}
-
-  Echo:
-    actions:
-      - type: shell
-        command: echo 'Value of DRY_RUN variable ${DRY_RUN}'
         
   Update:  
     actions:
