@@ -18,7 +18,7 @@ pipeline {
     REPOSITORY_BASE="<base_dir>"
     DB2_HOME="/home/db2inst1/sqllib"
     UCD_COMMAND_HOME="/var/lib/jenkins/udclient"
-    PATH="$PATH:/opt/liquibase/liquibase/liquibase:$DB2_HOME/bin:$UCD_COMMAND_HOME"
+    PATH="$PATH:/opt/liquibase/liquibase:$DB2_HOME/bin:$UCD_COMMAND_HOME"
     BASE_VERSION="50" 
   }
 	
