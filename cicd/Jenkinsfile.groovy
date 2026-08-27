@@ -23,7 +23,7 @@ pipeline {
     EMAIL="asmith@liquibase.com"
 
     LIQUIBASE_LICENSE_KEY = credentials('LIQUIBASE_LICENSE_KEY')
-    LIQUIBASE_SEARCH_PATH="checks,flows,sql"
+    LIQUIBASE_SEARCH_PATH="checks, flows, sql"
     LIQUIBASE_COMMAND_CHANGELOG_FILE="db.changelog-main.yaml"
     LIQUIBASE_COMMAND_URL="jdbc:db2://db2-luw.liquibase.net:50000/GDITREF5"
     LIQUIBASE_LIQUIBASE_SCHEMA_NAME="SECURE_TRACKING"
