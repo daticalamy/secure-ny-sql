@@ -15,7 +15,7 @@ on:
         description: 'Environment for build'
         type: environment
         required: true
-        default: DEV
+        default: REF
 
 ####################################################################
 #  Set up the environment
@@ -34,16 +34,16 @@ env:
 
   # Liquibase schema: Specified to allow flexibility in storage of Liquibase Change Tracking Tables
   # See https://docs.liquibase.com/parameters/liquibase-schema-name.html
-  LIQUIBASE_LIQUIBASE_SCHEMA_NAME: MUREX
+  LIQUIBASE_LIQUIBASE_SCHEMA_NAME: SECURE_TRACKING
   
   # Default schema: Specify schema for all changes
-  LIQUIBASE_COMMAND_DEFAULT_SCHEMA_NAME: MUREX
+  LIQUIBASE_COMMAND_DEFAULT_SCHEMA_NAME: ${{ vars.LIQUIBASE_DEFAULT_SCHEMA }}
 
   # Search path (See https://docs.liquibase.com/concepts/changelogs/how-liquibase-finds-files.html)
-  LIQUIBASE_SEARCH_PATH: flows,checks,changelogs
+  LIQUIBASE_SEARCH_PATH: checks,flows,sql
   
   # The database changelog. See https://docs.liquibase.com/concepts/changelogs/working-with-changelogs.html
-  LIQUIBASE_COMMAND_CHANGELOG_FILE: rootchangelog.yaml
+  LIQUIBASE_COMMAND_CHANGELOG_FILE: db.changelog-main.yaml
   
   ENVIRONMENT: ${{ inputs.environment }}
 
