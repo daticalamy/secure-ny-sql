@@ -148,13 +148,15 @@ pipeline {
             echo GIT_WORK_ITEM=${GIT_WORK_ITEM}
             cd ${PROJ_SQL}
             echo "=== Copying Reports to /home/cust_reports ==="
-            # Clear temp reports directory
-            rm -rf /var/lib/jenkins/tmp/cust_reports/;
+            # Ensure temp reports directory exists, then clear its contents (not the dir itself)
+            mkdir -p /var/lib/jenkins/tmp/cust_reports/
+            rm -rf /var/lib/jenkins/tmp/cust_reports/*
             timeStamp=`date +%Y%m%d%H%M%S`;
             reportCount=0
             while IFS= read -r -d '' report; do
               reportName=$(basename "$report" .html)
               cp "$report" "/var/lib/jenkins/tmp/cust_reports/${reportName}_${timeStamp}.html"
+              # Attach report to RTC work item
               echo "=== Triggering upload script... ==="
               # /var/lib/jenkins/tmp/rtc-dc/upload-datical-report.pl $GIT_WORK_ITEM ${reportName}_${timeStamp}.html
               reportCount=$((reportCount + 1))
@@ -164,7 +166,6 @@ pipeline {
             else
               echo "Copied $reportCount report(s) to /var/lib/jenkins/tmp/cust_reports/"
             fi
-            # Attach report(s) to RTC work item
         '''
     } // always
 
